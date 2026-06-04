@@ -115,6 +115,12 @@
     "views": {
       "codemem": [
         {
+          "id": "codemem.setupView",
+          "name": "Setup",
+          "icon": "$(checklist)",
+          "when": "codemem.setupIncomplete"
+        },
+        {
           "id": "codemem.memoriesView",
           "name": "Memories",
           "icon": "$(database)"
@@ -216,7 +222,17 @@
       {
         "command": "codemem.init",
         "title": "CodeMem: Initialize Workspace",
-        "icon": "$(wand)"      }
+        "icon": "$(wand)"      },
+      {
+        "command": "codemem.setupWizard",
+        "title": "CodeMem: Setup Wizard",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "codemem.refreshSetup",
+        "title": "Refresh Setup Status",
+        "icon": "$(refresh)"
+      }
     ],
     "menus": {
       "editor/context": [
@@ -231,6 +247,16 @@
           "command": "codemem.connect",
           "when": "view == codemem.memoriesView",
           "group": "navigation@0"
+        },
+        {
+          "command": "codemem.refreshSetup",
+          "when": "view == codemem.setupView",
+          "group": "navigation@0"
+        },
+        {
+          "command": "codemem.setupWizard",
+          "when": "view == codemem.setupView",
+          "group": "navigation@1"
         },
         {
           "command": "codemem.refresh",

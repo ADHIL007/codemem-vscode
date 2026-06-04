@@ -4,6 +4,7 @@ import * as path from 'path';
 import { CodememClient } from './api/client';
 import { MemoriesProvider } from './providers/memoriesProvider';
 import { SessionsProvider } from './providers/sessionsProvider';
+import { SetupWizard, SetupTreeProvider } from './providers/setupWizard';
 import { registerCommands } from './commands/index';
 import { StatusBarManager } from './utils/statusBar';
 
@@ -30,6 +31,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // ── Commands ──────────────────────────────────────────────────────────
   registerCommands(context, client, memoriesProvider, sessionsProvider, statusBar);
+
+  // ── Setup Wizard ──────────────────────────────────────────────────────
+  const setupWizard = new SetupWizard(context, client);
+  context.subscriptions.push(setupWizard);
+  context.subscriptions.push(
+    vscode.commands.registerCommand('codemem.setupWizard', () => setupWizard.show()),
+  );
+
+  // ── Setup Sidebar Tree View ───────────────────────────────────────────
+  const setupTreeProvider = new SetupTreeProvider(setupWizard);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('codemem.setupView', setupTreeProvider),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('codemem.runSetupStep', async (stepId: string, cmd: string) => {
+      await vscode.commands.executeCommand(cmd);
+      setupTreeProvider.refresh();
+    }),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('codemem.refreshSetup', () => {
+      setupTreeProvider.refresh();
+    }),
+  );
 
   // ── Config change listener ────────────────────────────────────────────
   context.subscriptions.push(
@@ -62,6 +87,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       // ── Auto-init: if workspace namespace exists on server but no .mcp.json ─
       autoInitIfRegistered(client);
+
+      // ── Show Setup Wizard if not all steps are complete ─
+      const allDone = await setupWizard.checkState();
+      void vscode.commands.executeCommand('setContext', 'codemem.setupIncomplete', !allDone);
+      if (!allDone) {
+        setupTreeProvider.refresh();
+        setupWizard.show();
+      }
     } else {
       statusBar.setDisconnected();
       // Show a non-intrusive message with a Connect action

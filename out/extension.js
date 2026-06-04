@@ -41,6 +41,7 @@ const path = __importStar(require("path"));
 const client_1 = require("./api/client");
 const memoriesProvider_1 = require("./providers/memoriesProvider");
 const sessionsProvider_1 = require("./providers/sessionsProvider");
+const setupWizard_1 = require("./providers/setupWizard");
 const index_1 = require("./commands/index");
 const statusBar_1 = require("./utils/statusBar");
 let statusBar;
@@ -58,6 +59,20 @@ async function activate(context) {
     context.subscriptions.push(vscode.window.registerTreeDataProvider('codemem.memoriesView', memoriesProvider), vscode.window.registerTreeDataProvider('codemem.sessionsView', sessionsProvider));
     // ── Commands ──────────────────────────────────────────────────────────
     (0, index_1.registerCommands)(context, client, memoriesProvider, sessionsProvider, statusBar);
+    // ── Setup Wizard ──────────────────────────────────────────────────────
+    const setupWizard = new setupWizard_1.SetupWizard(context, client);
+    context.subscriptions.push(setupWizard);
+    context.subscriptions.push(vscode.commands.registerCommand('codemem.setupWizard', () => setupWizard.show()));
+    // ── Setup Sidebar Tree View ───────────────────────────────────────────
+    const setupTreeProvider = new setupWizard_1.SetupTreeProvider(setupWizard);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('codemem.setupView', setupTreeProvider));
+    context.subscriptions.push(vscode.commands.registerCommand('codemem.runSetupStep', async (stepId, cmd) => {
+        await vscode.commands.executeCommand(cmd);
+        setupTreeProvider.refresh();
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('codemem.refreshSetup', () => {
+        setupTreeProvider.refresh();
+    }));
     // ── Config change listener ────────────────────────────────────────────
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('codemem.serverUrl')) {
@@ -83,6 +98,13 @@ async function activate(context) {
             statusBar.setConnected(serverUrl);
             // ── Auto-init: if workspace namespace exists on server but no .mcp.json ─
             autoInitIfRegistered(client);
+            // ── Show Setup Wizard if not all steps are complete ─
+            const allDone = await setupWizard.checkState();
+            void vscode.commands.executeCommand('setContext', 'codemem.setupIncomplete', !allDone);
+            if (!allDone) {
+                setupTreeProvider.refresh();
+                setupWizard.show();
+            }
         }
         else {
             statusBar.setDisconnected();
