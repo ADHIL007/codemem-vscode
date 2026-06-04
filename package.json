@@ -3,7 +3,7 @@
   "displayName": "CodeMem Team",
   "description": "Shared persistent memory for AI coding assistants — team edition",
   "version": "0.1.0",
-  "publisher": "codemem",
+  "publisher": "Codemem-team",
   "engines": { "vscode": "^1.80.0" },
   "categories": ["Other", "AI"],
   "keywords": ["codemem", "memory", "ai", "team", "mcp", "claude"],
