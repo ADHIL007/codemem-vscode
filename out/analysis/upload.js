@@ -137,7 +137,8 @@ class UploadQueue {
     }
     async uploadChunk(chunk) {
         const { serverUrl, namespace } = this.options;
-        const url = `${serverUrl}/api/graph/ingest-local-edges`;
+        const base = serverUrl.replace(/\/+$/, '');
+        const url = `${base}/api/graph/ingest-local-edges`;
         const body = JSON.stringify({
             namespace: namespace ?? 'default',
             edges: chunk.edges.map(e => ({
@@ -153,7 +154,7 @@ class UploadQueue {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body,
-            signal: AbortSignal.timeout(30000)
+            signal: AbortSignal.timeout(120000)
         });
         if (!response.ok) {
             const text = await response.text().catch(() => '');

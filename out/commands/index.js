@@ -903,7 +903,7 @@ async function runPureTsAnalysis(workspaceRoot, namespace, cfg, memoriesProvider
         if (!token.isCancellationRequested && dedupedEdges.length > 0) {
             progress.report({ message: `Uploading ${dedupedEdges.length} edges...`, increment: 5 });
             const queue = new UploadQueue({
-                chunkSize: 500,
+                chunkSize: 50,
                 maxRetries: 3,
                 retryDelayMs: 1000,
                 namespace,

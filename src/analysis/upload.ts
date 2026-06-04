@@ -122,7 +122,8 @@ export class UploadQueue {
 
   private async uploadChunk(chunk: UploadChunk): Promise<{ nodes_ingested: number; edges_ingested: number }> {
     const { serverUrl, namespace } = this.options;
-    const url = `${serverUrl}/api/graph/ingest-local-edges`;
+    const base = serverUrl.replace(/\/+$/, '');
+    const url = `${base}/api/graph/ingest-local-edges`;
 
     const body = JSON.stringify({
       namespace: namespace ?? 'default',
@@ -140,7 +141,7 @@ export class UploadQueue {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
-      signal: AbortSignal.timeout(30000)
+      signal: AbortSignal.timeout(120000)
     });
 
     if (!response.ok) {
