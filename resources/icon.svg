@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Brain outline -->
+  <path d="M9.5 2C7.5 2 6 3.5 6 5.5c0 .5.1 1 .3 1.4C4.9 7.5 4 8.9 4 10.5c0 1.2.5 2.3 1.3 3-.3.5-.5 1-.5 1.6 0 1.8 1.5 3.3 3.3 3.3.3 0 .6 0 .9-.1V22h6v-3.7c.3.1.6.1.9.1 1.8 0 3.3-1.5 3.3-3.3 0-.6-.2-1.1-.5-1.6.8-.7 1.3-1.8 1.3-3 0-1.6-.9-3-2.3-3.6.2-.4.3-.9.3-1.4C17 3.5 15.5 2 13.5 2c-.8 0-1.6.3-2.1.7H12c-.5-.5-1.1-.7-2.5-.7z" fill="none"/>
+  <!-- Database circles inside to suggest memory -->
+  <ellipse cx="12" cy="8.5" rx="3" ry="1.2" stroke-width="1.2"/>
+  <ellipse cx="12" cy="11" rx="3" ry="1.2" stroke-width="1.2"/>
+  <line x1="9" y1="8.5" x2="9" y2="11" stroke-width="1.2"/>
+  <line x1="15" y1="8.5" x2="15" y2="11" stroke-width="1.2"/>
+</svg>

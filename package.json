@@ -1,0 +1,318 @@
+{
+  "name": "codemem-team",
+  "displayName": "CodeMem Team",
+  "description": "Shared persistent memory for AI coding assistants — team edition",
+  "version": "0.1.0",
+  "publisher": "codemem",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Other", "AI"],
+  "keywords": ["codemem", "memory", "ai", "team", "mcp", "claude"],
+  "icon": "resources/brain-9-svgrepo-com.png",
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "CodeMem",
+      "properties": {
+        "codemem.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:4242",
+          "description": "URL of the shared CodeMem server (e.g. http://team-server:4242)"
+        },
+        "codemem.namespace": {
+          "type": "string",
+          "default": "",
+          "description": "Default memory namespace (defaults to workspace folder name if empty)"
+        },
+        "codemem.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-connect to the CodeMem server on startup"
+        },
+        "codemem.analysisMode": {
+          "type": "string",
+          "default": "local-only",
+          "enum": ["local-only", "hybrid", "server"],
+          "enumDescriptions": [
+            "Run analysis in the extension and upload extracted edges/memories only",
+            "Prefer local analysis; allow server repo workflows for registered repos",
+            "Use server repo analysis/indexing workflows"
+          ],
+          "description": "Where analysis work runs"
+        },
+        "codemem.memoriesPerPage": {
+          "type": "number",
+          "default": 50,
+          "minimum": 10,
+          "maximum": 200,
+          "description": "Number of memories to load per page in the sidebar"
+        },
+        "codemem.embeddingProvider": {
+          "type": "string",
+          "default": "nvidia-nim",
+          "enum": ["nvidia-nim", "openai", "ollama", "custom"],
+          "enumDescriptions": [
+            "NVIDIA NIM (nvidia/nv-embed-v1, 4096-dim, requires API key)",
+            "OpenAI (text-embedding-3-small, 1536-dim, requires API key)",
+            "Ollama — local model, no API key needed (e.g. nomic-embed-text)",
+            "Custom OpenAI-compatible endpoint — set embeddingUrl and embeddingModel manually"
+          ],
+          "description": "Embedding provider for Analyze Workspace"
+        },
+        "codemem.embeddingApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for embedding provider (NVIDIA NIM, OpenAI, Jina). Used by Analyze Workspace to embed code locally."
+        },
+        "codemem.embeddingUrl": {
+          "type": "string",
+          "default": "https://integrate.api.nvidia.com/v1",
+          "description": "Embedding API base URL (e.g. https://integrate.api.nvidia.com/v1 for NVIDIA NIM)"
+        },
+        "codemem.embeddingModel": {
+          "type": "string",
+          "default": "nvidia/nv-embed-v1",
+          "description": "Embedding model name"
+        },
+        "codemem.embeddingDimensions": {
+          "type": "number",
+          "default": 4096,
+          "description": "Embedding vector dimensions (must match the model)"
+        },
+        "codemem.chunkSize": {
+          "type": "number",
+          "default": 60,
+          "minimum": 20,
+          "maximum": 200,
+          "description": "Lines per chunk when analyzing workspace without codemem.exe"
+        },
+        "codemem.ignorePatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["node_modules", ".git", "dist", "out", "build", ".next", "target", "*.min.js", "*.map"],
+          "description": "Glob patterns to exclude from workspace analysis"
+        },
+        "codemem.autoAnalyzeOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically re-analyze changed files when saved (uses file watcher)"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codemem",
+          "title": "CodeMem",
+          "icon": "resources/brain-9-svgrepo-com.svg"
+        }
+      ]
+    },
+    "views": {
+      "codemem": [
+        {
+          "id": "codemem.memoriesView",
+          "name": "Memories",
+          "icon": "$(database)"
+        },
+        {
+          "id": "codemem.sessionsView",
+          "name": "Sessions",
+          "icon": "$(history)"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "codemem.connect",
+        "title": "CodeMem: Connect to Server",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "codemem.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "codemem.search",
+        "title": "CodeMem: Search Memories",
+        "icon": "$(search)"
+      },
+      {
+        "command": "codemem.storeSelection",
+        "title": "CodeMem: Store Selection as Memory"
+      },
+      {
+        "command": "codemem.storeClipboard",
+        "title": "CodeMem: Store Clipboard as Memory"
+      },
+      {
+        "command": "codemem.configureTeamMCP",
+        "title": "CodeMem: Configure Team MCP Server"
+      },
+      {
+        "command": "codemem.openUI",
+        "title": "CodeMem: Open Web UI"
+      },
+      {
+        "command": "codemem.showStats",
+        "title": "CodeMem: Show Server Stats"
+      },
+      {
+        "command": "codemem.deleteMemory",
+        "title": "Delete Memory",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "codemem.copyMemoryContent",
+        "title": "Copy Content"
+      },
+      {
+        "command": "codemem.copyMemoryId",
+        "title": "Copy ID"
+      },
+      {
+        "command": "codemem.registerRepo",
+        "title": "CodeMem: Register Repository",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "codemem.analyzeRepo",
+        "title": "CodeMem: Analyze Repository",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "codemem.listRepos",
+        "title": "CodeMem: List Repositories"
+      },
+      {
+        "command": "codemem.localAnalyzeAndSync",
+        "title": "CodeMem: Analyze Locally & Sync to Server",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "codemem.analyzeWorkspace",
+        "title": "CodeMem: Analyze Workspace",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "codemem.reanalyzeChanged",
+        "title": "CodeMem: Reanalyze Changed Files Only",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "codemem.forceFullRebuild",
+        "title": "CodeMem: Force Full Rebuild",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "codemem.doctor",
+        "title": "CodeMem: Doctor — Check All Connections",
+        "icon": "$(pulse)"      },
+      {
+        "command": "codemem.init",
+        "title": "CodeMem: Initialize Workspace",
+        "icon": "$(wand)"      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "codemem.storeSelection",
+          "when": "editorHasSelection",
+          "group": "codemem@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "codemem.connect",
+          "when": "view == codemem.memoriesView",
+          "group": "navigation@0"
+        },
+        {
+          "command": "codemem.refresh",
+          "when": "view == codemem.memoriesView || view == codemem.sessionsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codemem.search",
+          "when": "view == codemem.memoriesView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "codemem.analyzeWorkspace",
+          "when": "view == codemem.memoriesView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "codemem.doctor",
+          "when": "view == codemem.memoriesView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "codemem.registerRepo",
+          "when": "view == codemem.memoriesView",
+          "group": "overflow@1"
+        },
+        {
+          "command": "codemem.listRepos",
+          "when": "view == codemem.memoriesView",
+          "group": "overflow@2"
+        },
+        {
+          "command": "codemem.configureTeamMCP",
+          "when": "view == codemem.memoriesView",
+          "group": "overflow@3"
+        },
+        {
+          "command": "codemem.openUI",
+          "when": "view == codemem.memoriesView",
+          "group": "overflow@4"
+        },
+        {
+          "command": "codemem.showStats",
+          "when": "view == codemem.memoriesView",
+          "group": "overflow@5"
+        },
+        {
+          "command": "codemem.doctor",
+          "when": "view == codemem.memoriesView",
+          "group": "overflow@6"
+        },
+        {
+          "command": "codemem.init",
+          "when": "view == codemem.memoriesView",
+          "group": "overflow@7"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codemem.deleteMemory",
+          "when": "view == codemem.memoriesView && viewItem == memory",
+          "group": "inline"
+        },
+        {
+          "command": "codemem.copyMemoryContent",
+          "when": "view == codemem.memoriesView && viewItem == memory",
+          "group": "context@1"
+        },
+        {
+          "command": "codemem.copyMemoryId",
+          "when": "view == codemem.memoriesView && viewItem == memory",
+          "group": "context@2"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^2.0.0"
+  }
+}
