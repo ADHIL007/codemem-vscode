@@ -62,6 +62,7 @@ export interface FileStamp {
 export interface AnalysisCache {
   files: Record<string, FileStamp>;
   version: number;
+  edgeHash?: string;
 }
 
 export interface UploadChunk {

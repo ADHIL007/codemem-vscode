@@ -53,6 +53,12 @@ class StatusBarManager {
         this.item.backgroundColor = undefined;
         this.item.color = new vscode.ThemeColor('statusBarItem.prominentForeground');
     }
+    setIndexingUpToDate() {
+        this.item.text = '$(check) CodeMem: indexing up to date';
+        this.item.tooltip = 'CodeMem: workspace indexing is current\nClick to reconnect';
+        this.item.backgroundColor = undefined;
+        this.item.color = new vscode.ThemeColor('statusBarItem.prominentForeground');
+    }
     setDisconnected() {
         this.item.text = '$(database) CodeMem $(warning)';
         this.item.tooltip = 'CodeMem: not connected — click to connect';

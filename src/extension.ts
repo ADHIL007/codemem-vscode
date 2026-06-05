@@ -39,6 +39,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('codemem.setupWizard', () => setupWizard.show()),
   );
 
+  // When all setup steps finish, update status bar
+  setupWizard.onAllComplete(() => {
+    statusBar?.setIndexingUpToDate();
+    void vscode.commands.executeCommand('setContext', 'codemem.setupIncomplete', false);
+  });
+
   // ── Setup Sidebar Tree View ───────────────────────────────────────────
   const setupTreeProvider = new SetupTreeProvider(setupWizard);
   context.subscriptions.push(
@@ -94,6 +100,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (!allDone) {
         setupTreeProvider.refresh();
         setupWizard.show();
+      } else {
+        statusBar.setIndexingUpToDate();
       }
     } else {
       statusBar.setDisconnected();

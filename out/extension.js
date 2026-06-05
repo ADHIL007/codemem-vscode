@@ -63,6 +63,11 @@ async function activate(context) {
     const setupWizard = new setupWizard_1.SetupWizard(context, client);
     context.subscriptions.push(setupWizard);
     context.subscriptions.push(vscode.commands.registerCommand('codemem.setupWizard', () => setupWizard.show()));
+    // When all setup steps finish, update status bar
+    setupWizard.onAllComplete(() => {
+        statusBar?.setIndexingUpToDate();
+        void vscode.commands.executeCommand('setContext', 'codemem.setupIncomplete', false);
+    });
     // ── Setup Sidebar Tree View ───────────────────────────────────────────
     const setupTreeProvider = new setupWizard_1.SetupTreeProvider(setupWizard);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('codemem.setupView', setupTreeProvider));
@@ -104,6 +109,9 @@ async function activate(context) {
             if (!allDone) {
                 setupTreeProvider.refresh();
                 setupWizard.show();
+            }
+            else {
+                statusBar.setIndexingUpToDate();
             }
         }
         else {

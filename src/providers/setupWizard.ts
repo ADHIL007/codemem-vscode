@@ -19,13 +19,20 @@ export class SetupWizard implements vscode.Disposable {
   private readonly client: CodememClient;
   private disposed = false;
 
+  private _onAllComplete = new vscode.EventEmitter<void>();
+  public onAllComplete = this._onAllComplete.event;
+
+  private static readonly COMPLETED_KEY = 'codemem.setupCompletedSteps';
+
   constructor(context: vscode.ExtensionContext, client: CodememClient) {
     this.context = context;
     this.client = client;
+    // Load persisted completion state so completed steps survive restarts
+    const saved = context.workspaceState.get<Record<string, boolean>>(SetupWizard.COMPLETED_KEY, {});
     this.steps = [
-      { id: 'init', label: 'Initialize Workspace', description: 'Set up hooks, MCP config, agents, and permissions', completed: false },
-      { id: 'register', label: 'Register Repository', description: 'Register this workspace on the CodeMem server with a namespace', completed: false },
-      { id: 'analyze', label: 'Analyze Workspace', description: 'Parse symbols, build graph edges, compute embeddings', completed: false },
+      { id: 'init', label: 'Initialize Workspace', description: 'Set up hooks, MCP config, agents, and permissions', completed: saved['init'] ?? false },
+      { id: 'register', label: 'Register Repository', description: 'Register this workspace on the CodeMem server with a namespace', completed: saved['register'] ?? false },
+      { id: 'analyze', label: 'Analyze Workspace', description: 'Parse symbols, build graph edges, compute embeddings', completed: saved['analyze'] ?? false },
     ];
   }
 
@@ -98,6 +105,15 @@ export class SetupWizard implements vscode.Disposable {
     this.updateWebview();
   }
 
+  /** Persist the current completion state of all steps to workspaceState. */
+  private async saveCompletedSteps(): Promise<void> {
+    const saved: Record<string, boolean> = {};
+    for (const step of this.steps) {
+      saved[step.id] = step.completed;
+    }
+    await this.context.workspaceState.update(SetupWizard.COMPLETED_KEY, saved);
+  }
+
   private async refreshStepStatus(): Promise<void> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) { return; }
@@ -105,40 +121,68 @@ export class SetupWizard implements vscode.Disposable {
     const workspaceRoot = folders[0].uri.fsPath;
     const workspaceName = folders[0].name;
 
-    // Step 1: Initialize Workspace — check if .mcp.json has codemem entry + .claude/settings.json exists
-    const mcpJsonPath = path.join(workspaceRoot, '.mcp.json');
-    const claudeSettingsPath = path.join(workspaceRoot, '.claude', 'settings.json');
-    let initDone = false;
-    if (fs.existsSync(mcpJsonPath) && fs.existsSync(claudeSettingsPath)) {
-      try {
-        const mcpConfig = JSON.parse(fs.readFileSync(mcpJsonPath, 'utf8'));
-        if (mcpConfig?.mcpServers?.codemem) {
-          initDone = true;
-        }
-      } catch { /* not valid */ }
+    // Resolve the effective namespace (user setting > folder name)
+    const config = vscode.workspace.getConfiguration('codemem');
+    const configuredNs = config.get<string>('namespace', '') || '';
+    const effectiveNamespace = configuredNs || workspaceName;
+
+    // Step 1: Initialize Workspace — check if .mcp.json has codemem entry
+    // (don't require .claude/ since Copilot-only workspaces may not have it)
+    {
+      const mcpJsonPath = path.join(workspaceRoot, '.mcp.json');
+      let initDone = false;
+      if (fs.existsSync(mcpJsonPath)) {
+        try {
+          const mcpConfig = JSON.parse(fs.readFileSync(mcpJsonPath, 'utf8'));
+          if (mcpConfig?.mcpServers?.codemem) {
+            initDone = true;
+          }
+        } catch { /* not valid */ }
+      }
+      this.steps[0].completed = initDone;
     }
-    this.steps[0].completed = initDone;
 
-    // Step 2: Register Repository — check if namespace is registered on server
-    let registerDone = false;
-    try {
-      const repos = await this.client.listRepos();
-      const normalizedRoot = workspaceRoot.replace(/\\/g, '/').toLowerCase();
-      registerDone = repos.some((r) => {
-        const normalizedPath = r.path.replace(/\\/g, '/').toLowerCase();
-        return normalizedPath === normalizedRoot
-          || r.namespace === workspaceName
-          || (r.name?.toLowerCase().includes(workspaceName.toLowerCase()) ?? false);
-      });
-    } catch { /* server unreachable — not registered */ }
-    this.steps[1].completed = registerDone;
+    // Step 2: Register Repository — match by namespace, path, or folder name
+    {
+      let registerDone = false;
+      try {
+        const repos = await this.client.listRepos();
+        const normalizedRoot = workspaceRoot.replace(/[\\/]+/g, '/').replace(/\/$/, '').toLowerCase();
 
-    // Step 3: Analyze Workspace — check if analysis cache exists in workspace state
-    const CACHE_VERSION = 2;
-    const cacheKey = `analysisCache:v${CACHE_VERSION}:${workspaceRoot.replace(/\\/g, '/').toLowerCase()}`;
-    const cache = this.context.workspaceState.get<{ files: Record<string, unknown> }>(cacheKey);
-    const analyzeDone = !!(cache && Object.keys(cache.files).length > 0);
-    this.steps[2].completed = analyzeDone;
+        registerDone = repos.some((r) => {
+          // Match by namespace (most reliable)
+          if (r.namespace && r.namespace.toLowerCase() === effectiveNamespace.toLowerCase()) {
+            return true;
+          }
+          // Match by path
+          if (r.path) {
+            const normalizedPath = r.path.replace(/[\\/]+/g, '/').replace(/\/$/, '').toLowerCase();
+            if (normalizedPath === normalizedRoot) { return true; }
+          }
+          // Match by repo name containing workspace folder name
+          if (r.name && r.name.toLowerCase() === workspaceName.toLowerCase()) {
+            return true;
+          }
+          return false;
+        });
+      } catch {
+        // Server unreachable — if previously marked complete, keep that state
+        registerDone = this.steps[1].completed;
+      }
+      this.steps[1].completed = registerDone;
+    }
+
+    // Step 3: Analyze Workspace — check if analysis cache has files for this workspace
+    {
+      const CACHE_VERSION = 2;
+      const normalizedKey = workspaceRoot.replace(/[\\/]+/g, '/').toLowerCase();
+      const cacheKey = `analysisCache:v${CACHE_VERSION}:${normalizedKey}`;
+      const cache = this.context.workspaceState.get<{ files: Record<string, unknown> }>(cacheKey);
+      this.steps[2].completed = !!(cache && Object.keys(cache.files).length > 0);
+    }
+
+    // Persist whatever changed
+    await this.saveCompletedSteps();
   }
 
   private async runStep(stepId: string): Promise<void> {
@@ -154,7 +198,9 @@ export class SetupWizard implements vscode.Disposable {
         break;
     }
 
-    // Re-check status after running
+    // Re-check status after running (force re-check even if previously marked complete)
+    const stepIndex = this.steps.findIndex((s) => s.id === stepId);
+    if (stepIndex >= 0) { this.steps[stepIndex].completed = false; }
     await this.refreshStepStatus();
     this.updateWebview();
 
@@ -163,6 +209,7 @@ export class SetupWizard implements vscode.Disposable {
       void vscode.window.showInformationMessage(
         'CodeMem: Setup complete! All steps finished. You can now close the wizard.',
       );
+      this._onAllComplete.fire();
       this.updateWebview();
     }
   }
@@ -369,6 +416,7 @@ export class SetupWizard implements vscode.Disposable {
     this.disposed = true;
     this.panel?.dispose();
     this.panel = undefined;
+    this._onAllComplete.dispose();
   }
 
   /** Expose steps for the tree provider */

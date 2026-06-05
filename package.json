@@ -100,6 +100,11 @@
           "type": "boolean",
           "default": false,
           "description": "Automatically re-analyze changed files when saved (uses file watcher)"
+        },
+        "codemem.copilotHookIndexing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Re-index a file's edges whenever it is saved (lightweight Copilot PostToolUse equivalent)"
         }
       }
     },
