@@ -410,7 +410,7 @@ Then press `F5` in VS Code to launch the Extension Development Host.
 ## Requirements
 
 - VS Code ≥ 1.80.0
-- A running [CodeMem](https://github.com/cogniplex/codemem) server (`codemem serve --api`)
+- A running [CodeMem](https://github.com/ADHIL007/codemem-server-v2) server (`codemem serve --api`)
 - *(Optional)* `codemem` CLI in PATH — enables stdio MCP transport and lifecycle hooks
 - *(Optional)* An embedding provider API key (for `nvidia-nim` or `openai`), or a local Ollama instance
 
