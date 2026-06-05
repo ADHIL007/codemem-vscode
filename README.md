@@ -2,6 +2,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-^1.80.0-blue.svg)](https://code.visualstudio.com/)
+[![VS Code Marketplace](https://img.shields.io/badge/Marketplace-CodeMem%20Team-blue?logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=Codemem-team.codemem-team)
 
 Shared persistent memory for AI coding assistants — team edition. A VS Code extension that connects to the [CodeMem Server v2](https://github.com/ADHIL007/codemem-server-v2), giving your team a shared knowledge graph that AI assistants can query across sessions.
 
