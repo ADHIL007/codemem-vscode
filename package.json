@@ -2,11 +2,11 @@
   "name": "codemem-team",
   "displayName": "CodeMem Team",
   "description": "Shared persistent memory for AI coding assistants — team edition",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "Codemem-team",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cogniplex/codemem-vscode"
+    "url": "https://github.com/ADHIL007/codemem-vscode"
   },
   "engines": { "vscode": "^1.80.0" },
   "categories": ["Other", "AI"],
@@ -237,6 +237,11 @@
         "command": "codemem.refreshSetup",
         "title": "Refresh Setup Status",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "codemem.installServerHelp",
+        "title": "CodeMem: Install Server",
+        "icon": "$(cloud-download)"
       }
     ],
     "menus": {

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MemoriesProvider = exports.MemoryNode = exports.MemoryTypeGroup = exports.DoctorGroupNode = exports.DoctorCheckNode = exports.ProgressNode = exports.ProgressLogNode = exports.StatusHeaderNode = void 0;
+exports.MemoriesProvider = exports.MemoryNode = exports.MemoryTypeGroup = exports.DoctorGroupNode = exports.DoctorCheckNode = exports.ProgressNode = exports.ProgressLogNode = exports.ServerHelpNode = exports.StatusHeaderNode = void 0;
 exports.resolveNamespace = resolveNamespace;
 const vscode = __importStar(require("vscode"));
 const MEMORY_TYPES = [
@@ -83,6 +83,31 @@ class StatusHeaderNode extends vscode.TreeItem {
     }
 }
 exports.StatusHeaderNode = StatusHeaderNode;
+class ServerHelpNode extends vscode.TreeItem {
+    constructor() {
+        super('Need a server?', vscode.TreeItemCollapsibleState.None);
+        this.contextValue = 'serverHelp';
+        this.description = 'Click for setup help';
+        this.tooltip = new vscode.MarkdownString(`**Don't have a CodeMem server?**\n\n` +
+            `If your organization hasn't configured a CodeMem server, ` +
+            `you can install and run one locally from:\n\n` +
+            `🔗 [codemem-server-v2](https://github.com/ADHIL007/codemem-server-v2)\n\n` +
+            `**Quick start:**\n` +
+            '```bash\n' +
+            `git clone https://github.com/ADHIL007/codemem-server-v2.git\n` +
+            `cd codemem-server-v2\n` +
+            '# Follow README for setup\n' +
+            '```\n\n' +
+            `Then set \`codemem.serverUrl\` in VS Code settings to your server URL.`);
+        this.tooltip.isTrusted = true;
+        this.iconPath = new vscode.ThemeIcon('question', new vscode.ThemeColor('editorInfo.foreground'));
+        this.command = {
+            command: 'codemem.installServerHelp',
+            title: 'Install Server Help',
+        };
+    }
+}
+exports.ServerHelpNode = ServerHelpNode;
 class ProgressLogNode extends vscode.TreeItem {
     constructor(line) {
         super(line, vscode.TreeItemCollapsibleState.None);
@@ -267,7 +292,7 @@ class MemoriesProvider {
         this.cachedStatusNode = statusNode;
         if (!this.connected) {
             this.loading = false;
-            const extras = [];
+            const extras = [new ServerHelpNode()];
             if (this.doctorGroup) {
                 extras.push(this.doctorGroup);
             }

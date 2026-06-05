@@ -52,6 +52,33 @@ export class StatusHeaderNode extends vscode.TreeItem {
   }
 }
 
+export class ServerHelpNode extends vscode.TreeItem {
+  constructor() {
+    super('Need a server?', vscode.TreeItemCollapsibleState.None);
+    this.contextValue = 'serverHelp';
+    this.description = 'Click for setup help';
+    this.tooltip = new vscode.MarkdownString(
+      `**Don't have a CodeMem server?**\n\n` +
+        `If your organization hasn't configured a CodeMem server, ` +
+        `you can install and run one locally from:\n\n` +
+        `🔗 [codemem-server-v2](https://github.com/ADHIL007/codemem-server-v2)\n\n` +
+        `**Quick start:**\n` +
+        '```bash\n' +
+        `git clone https://github.com/ADHIL007/codemem-server-v2.git\n` +
+        `cd codemem-server-v2\n` +
+        '# Follow README for setup\n' +
+        '```\n\n' +
+        `Then set \`codemem.serverUrl\` in VS Code settings to your server URL.`,
+    );
+    this.tooltip.isTrusted = true;
+    this.iconPath = new vscode.ThemeIcon('question', new vscode.ThemeColor('editorInfo.foreground'));
+    this.command = {
+      command: 'codemem.installServerHelp',
+      title: 'Install Server Help',
+    };
+  }
+}
+
 export class ProgressLogNode extends vscode.TreeItem {
   constructor(public readonly line: string) {
     super(line, vscode.TreeItemCollapsibleState.None);
@@ -148,6 +175,7 @@ export class MemoryNode extends vscode.TreeItem {
 
 type MemoryTreeItem =
   | StatusHeaderNode
+  | ServerHelpNode
   | ProgressNode
   | ProgressLogNode
   | DoctorGroupNode
@@ -283,7 +311,7 @@ export class MemoriesProvider
 
     if (!this.connected) {
       this.loading = false;
-      const extras: MemoryTreeItem[] = [];
+      const extras: MemoryTreeItem[] = [new ServerHelpNode()];
       if (this.doctorGroup) { extras.push(this.doctorGroup); }
       return [statusNode, ...extras];
     }

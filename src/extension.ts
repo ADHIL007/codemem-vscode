@@ -62,6 +62,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
   );
 
+  // ── Install Server Help ───────────────────────────────────────────────
+  context.subscriptions.push(
+    vscode.commands.registerCommand('codemem.installServerHelp', async () => {
+      const choice = await vscode.window.showInformationMessage(
+        'CodeMem Server is required. You can install codemem-server-v2 from GitHub and run it locally.',
+        { modal: true, detail: 'Repository: https://github.com/ADHIL007/codemem-server-v2\n\nQuick setup:\n  1. git clone https://github.com/ADHIL007/codemem-server-v2.git\n  2. cd codemem-server-v2\n  3. Follow the README instructions to start the server\n  4. Set codemem.serverUrl in VS Code settings to your server URL' },
+        'Open GitHub Repo',
+        'Clone & Setup in Terminal',
+      );
+      if (choice === 'Open GitHub Repo') {
+        vscode.env.openExternal(vscode.Uri.parse('https://github.com/ADHIL007/codemem-server-v2'));
+      } else if (choice === 'Clone & Setup in Terminal') {
+        const term = vscode.window.createTerminal('CodeMem Server Setup');
+        term.show();
+        term.sendText('git clone https://github.com/ADHIL007/codemem-server-v2.git && cd codemem-server-v2');
+      }
+    }),
+  );
+
   // ── Config change listener ────────────────────────────────────────────
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
@@ -110,6 +129,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         .showInformationMessage(
           `CodeMem: server not reachable at ${serverUrl}`,
           'Configure URL',
+          'Install Server',
           'Start Server',
         )
         .then((choice) => {
@@ -118,6 +138,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               'workbench.action.openSettings',
               'codemem.serverUrl',
             );
+          } else if (choice === 'Install Server') {
+            vscode.commands.executeCommand('codemem.installServerHelp');
           } else if (choice === 'Start Server') {
             // Open terminal with start command
             const term = vscode.window.createTerminal('CodeMem Server');

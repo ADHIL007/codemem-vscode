@@ -3,7 +3,49 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-^1.80.0-blue.svg)](https://code.visualstudio.com/)
 
-Shared persistent memory for AI coding assistants — team edition. A VS Code extension that connects to the [CodeMem](https://github.com/cogniplex/codemem) server, giving your team a shared knowledge graph that AI assistants can query across sessions.
+Shared persistent memory for AI coding assistants — team edition. A VS Code extension that connects to the [CodeMem Server v2](https://github.com/ADHIL007/codemem-server-v2), giving your team a shared knowledge graph that AI assistants can query across sessions.
+
+> **Credits**: This project is forked from [cogniplex/codemem](https://github.com/cogniplex/codemem). The server has been enhanced and maintained at [ADHIL007/codemem-server-v2](https://github.com/ADHIL007/codemem-server-v2) with performance improvements (centrality skip during bulk ingest, dangling-edge tolerance, server-side logging), Copilot on-save hooks, and incremental edge-hash dedup.
+
+---
+
+## What's New in v0.2.0
+
+### Server-Side Changes (codemem-server-v2)
+
+| Change | Impact |
+|--------|--------|
+| **Centrality recompute removed from bulk ingest** | Fixed 504 gateway timeouts — each 50-edge chunk now completes in 30-600ms instead of 100s+ |
+| **Dangling edge tolerance** | `from_storage` no longer crashes when an edge references a missing node — skips with a warning |
+| **Server-side timing logs** | Every ingest request logs elapsed time per phase (nodes stored, edges stored, graph lock, total) |
+| **`Tests` RelationshipType added** | TESTS edges from the extension no longer cause 404 parse errors |
+| **`infer_node_kind` improved** | Correctly handles `sym:`, `endpoint:`, `author:` prefixes and sub-kinds (`:class:`, `:function:`, `:method:`, etc.) |
+
+### Extension Changes
+
+| Change | Impact |
+|--------|--------|
+| **Copilot on-save hook** | Every file save re-parses and uploads that file's edges automatically — no manual re-analysis needed |
+| **Edge-hash dedup** | Analysis skips upload entirely when edges haven't changed since last run |
+| **No-change short-circuit** | If zero files changed, analysis exits instantly with "Indexing up to date" |
+| **Setup wizard persistence** | Completed steps survive VS Code restarts — wizard won't re-appear when server is temporarily offline |
+| **Step detection improvements** | Step 1 no longer requires `.claude/`; Step 2 matches by namespace/path/name; Step 3 uses normalized paths |
+| **Status bar: "indexing up to date"** | Shows `✓ CodeMem: indexing up to date` when all 3 setup steps are complete |
+| **Copilot behavioral instructions** | `copilot-instructions.md` now includes "always do" rules (recall at session start, check blast radius before changes, store decisions) |
+| **Upload reliability fixes** | Fixed double-slash URL bug, increased timeout to 120s, chunk size reduced to 50, file-based upload logging |
+| **`copilotHookIndexing` setting** | New setting (default: `true`) to enable/disable the on-save hook |
+
+### Updated Setup Steps
+
+The 3-step onboarding wizard now detects state more reliably:
+
+| Step | How Completion Is Detected |
+|------|---------------------------|
+| **1. Initialize Workspace** | `.mcp.json` exists with a `codemem` entry (`.claude/` no longer required — supports Copilot-only workspaces) |
+| **2. Register Repository** | Server namespace matches configured `codemem.namespace` setting, workspace folder name, or registered repo path |
+| **3. Analyze Workspace** | Analysis cache exists with >0 files for this workspace |
+
+If the server is unreachable during startup, Step 2 preserves its previous state instead of flipping to incomplete.
 
 ---
 
@@ -101,11 +143,13 @@ Install from the VS Code marketplace or build from source.
 ### 2. Start a CodeMem Server
 
 ```bash
-# Install codemem CLI
-cargo install codemem
+# Clone and build the server
+git clone https://github.com/ADHIL007/codemem-server-v2.git
+cd codemem-server-v2
+cargo install --path crates/codemem
 
 # Start the API server
-codemem serve --api
+codemem serve --api --http --port 4242
 ```
 
 The extension auto-connects to `http://localhost:4242` on startup. If the server isn't available, it offers "Configure URL" or "Start Server" (opens terminal with `codemem serve --api`).
@@ -205,14 +249,14 @@ All settings are under the `codemem.*` prefix in VS Code settings.
 | `codemem.namespace` | *(workspace name)* | Memory namespace for this workspace |
 | `codemem.autoConnect` | `true` | Auto-connect on startup |
 | `codemem.analysisMode` | `local-only` | Where analysis runs: `local-only`, `hybrid`, or `server` |
-| `codemem.embeddingProvider` | `nvidia-nim` | Embedding provider: `nvidia-nim`, `openai`, `ollama`, `custom` |
+| `codemem.copilotHookIndexing` | `true` | **NEW** — Re-index file edges on every save (lightweight Copilot PostToolUse equivalent) |
+| `codemem.embeddingProvider` | *(prompt on first use)* | Embedding provider: `nvidia-nim`, `openai`, `ollama`, or skip |
 | `codemem.embeddingApiKey` | | API key for the embedding provider |
-| `codemem.embeddingUrl` | `https://integrate.api.nvidia.com/v1` | Embedding API base URL |
-| `codemem.embeddingModel` | `nvidia/nv-embed-v1` | Embedding model name |
-| `codemem.embeddingDimensions` | `4096` | Embedding vector dimensions |
+| `codemem.embeddingUrl` | *(from preset)* | Embedding API base URL |
+| `codemem.embeddingModel` | *(from preset)* | Embedding model name |
 | `codemem.chunkSize` | `60` | Lines per chunk during analysis |
 | `codemem.ignorePatterns` | `[node_modules, .git, dist, ...]` | Globs to exclude from analysis |
-| `codemem.autoAnalyzeOnSave` | `false` | Auto-reanalyze on file save |
+| `codemem.autoAnalyzeOnSave` | `false` | Full re-analysis on file changes (heavy — prefer `copilotHookIndexing`) |
 | `codemem.memoriesPerPage` | `50` | Memories loaded per page in sidebar |
 
 ### Embedding Providers
@@ -397,13 +441,23 @@ The installed skill/instructions teach assistants to:
 ## Building from Source
 
 ```bash
-git clone https://github.com/cogniplex/codemem-vscode.git
+git clone https://github.com/ADHIL007/codemem-vscode.git
 cd codemem-vscode
 npm install
 npm run compile
 ```
 
 Then press `F5` in VS Code to launch the Extension Development Host.
+
+---
+
+## Related Repositories
+
+| Repository | Description |
+|------------|-------------|
+| [ADHIL007/codemem-server-v2](https://github.com/ADHIL007/codemem-server-v2) | The enhanced CodeMem server (Rust) — forked from cogniplex/codemem |
+| [ADHIL007/codemem-vscode](https://github.com/ADHIL007/codemem-vscode) | This VS Code extension |
+| [cogniplex/codemem](https://github.com/ADHIL007/codemem) | Original upstream project |
 
 ---
 
